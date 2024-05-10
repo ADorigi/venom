@@ -32,14 +32,18 @@ curl -L -o kubebuilder "https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go 
 
 3. Change permission to allow execution with `chmod +x kubebuilder`
 4. Move it to `/usr/local/bin/` folder with `mv kubebuilder /usr/local/bin/`. I had to use `sudo`.
-5. Initilize go mod with `go mod init <repo-name>`
+5. Initilize go mod with `go mod init github.com/adorigi/venom`
 6. Scaffold the operator using the following command
 
 ```
-kubebuilder init --domain venom.gule-gulzar.com --repo <I-used-the-same-as-one-in-go-mod>
+kubebuilder init --domain venom.gule-gulzar.com --repo github.com/adorigi/venom
 ```
 
-7. 
+7. Initilize the new api as follows:
+
+```
+kubebuilder create api --group poison --version v1 --kind ClusterScan
+```
 
 ## useful coommnads
 

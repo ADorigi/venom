@@ -7,4 +7,14 @@ layout:
 - go.kubebuilder.io/v4
 projectName: venom
 repo: github.com/adorigi/venom
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: venom.gule-gulzar.com
+  group: poison
+  kind: ClusterScan
+  path: github.com/adorigi/venom/api/v1
+  version: v1
 version: "3"
