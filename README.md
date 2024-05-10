@@ -1,2 +1,3 @@
 # Venom
-A basic Kubernetes Operator
+This repository will house the components for Venom, a basic Kubernetes operator.
+
