@@ -12,13 +12,67 @@ A kuberentes operator is a pattern which consists of a kubernetes controller, an
 
 ## Why Venom?
 
-The Venom operator defines a resource called ClusterScan, which, as you might have guessed, scans the cluster. But it also exposes a rest api, which lets you get information about the native kubernetes resources inside the cluster. In other words, it can losely be considered a wrapper to `kubectl get` for the current scope of the project. 
+The Venom operator defines a resource called ClusterScan. For the time being, it is designed to run a custom kuberntes job with the specified spec, but it can be designed further. 
 
 ## How do you define this custom resource which Venom monitors?
 
 
+A one-off ClusterScan reesource can be created using a similar manifest as given below:
+
+```
+apiVersion: poison.venom.gule-gulzar.com/v1
+kind: ClusterScan
+metadata:
+  name: clusterscan-one-off
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: busybox
+            name: testjob
+          restartPolicy: Never
+
+```
+
+A recurring ClusterScan reesource can be created using a similar manifest as given below:
+
+```
+
+apiVersion: poison.venom.gule-gulzar.com/v1
+kind: ClusterScan
+metadata:
+  name: clusterscan-cron
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: busybox
+            name: testjob
+          restartPolicy: Never
+  jobRetentionTime: 5
+
+```
 
 
+## Using Venom:
+
+Since Venom is still under development, it can be deployed from source using the following steps:
+
+1. You need access to a kubernetes cluster. The following commands automatically use the current context in your `kubeconfig` file.
+2. Run `make install` command to install the CRDs into the cluster.
+3. Run `make run` command to start the controller locally.
+4. Use kustomize to deploy sample resources for ClusterScan resource, defined in config/samples/ of this repository. 
+```
+kubectl apply -k config/samples
+```
+
+
+<!-- 
 ## Steps I followed
 
 1. Created a clean kubernetes cluster with `minikube start`
@@ -47,5 +101,8 @@ kubebuilder create api --group poison --version v1 --kind ClusterScan
 
 ## useful coommnads
 
-- kubectl proxy --port=8080   ------------> curl localhost:8080/apis
+- kubectl proxy --port=8080   -> curl localhost:8080/apis
 - kubebuilder create api --group ___ --version v1 --kind ClusterScan
+
+ -->
+
