@@ -71,6 +71,10 @@ Since Venom is still under development, it can be deployed from source using the
 kubectl apply -k config/samples
 ```
 
+### Using operator image from docker hub
+
+Instead of `make run`, the deployed image for the operator from docker hub can also be used
+
 
 <!-- 
 ## Steps I followed
