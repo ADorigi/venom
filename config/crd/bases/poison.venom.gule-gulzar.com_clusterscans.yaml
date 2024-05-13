@@ -3482,7 +3482,6 @@ spec:
                 type: string
             required:
             - jobTemplate
-            - schedule
             type: object
           status:
             properties:

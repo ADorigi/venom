@@ -64,9 +64,7 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	logger := log.FromContext(ctx)
 
 	currentTime := time.Now()
-	logger.Info("reconcile running at", "time", currentTime.String())
-
-	//                    logger.Info("reconcile running at", currentTime.Unix())
+	logger.Info("[running reconciler]", "time", currentTime.String())
 
 	// TODO(user): your logic here
 	clusterscan := poisonv1.ClusterScan{}
@@ -76,41 +74,46 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// logger.Info("running reconcile for", "clusterscan", clusterscan)
-
-	logger.Info("running reconciliation loop")
-
 	//*********************** get the list of all jobs run by our clusterscan resource
 
-	var ourJobs kbatch.JobList
-	if err := r.List(ctx, &ourJobs, client.InNamespace(req.Namespace)); err != nil {
-		logger.Error(err, "unable to list child Jobs")
-		return ctrl.Result{}, err
-	}
+	// var ourJobs kbatch.JobList
+	// if err := r.List(ctx, &ourJobs, client.InNamespace(req.Namespace)); err != nil {
+	// 	logger.Error(err, "unable to list child Jobs")
+	// 	return ctrl.Result{}, err
+	// }
 
-	//*********************** get the time at which the last one was run
-
+	//*********************** check if already scheduled
 	if clusterscan.Status.LastScheduledTime != nil {
 
-		//*********************** calculate the nexttime from the last scheduled time using helper function
+		//*********************** check if it is a one off or recurring clusterscan resource
 
-		nextExecutionTime, err := getNextExecutionTime(logger, clusterscan.Status.LastScheduledTime.Time, clusterscan.Spec.Schedule)
-		if err != nil {
-			logger.Error(err, "cannot calculate next execution time")
+		if clusterscan.Spec.Schedule == nil {
 
-			return ctrl.Result{
-				Requeue: true,
-			}, nil
+			logger.Info("job already created")
+			return ctrl.Result{}, nil
+
+		} else {
+
+			//*********************** calculate the nexttime from the last scheduled time using helper function
+
+			nextExecutionTime, err := getNextExecutionTime(logger, clusterscan.Status.LastScheduledTime.Time, *clusterscan.Spec.Schedule)
+			if err != nil {
+				logger.Error(err, "cannot calculate next execution time")
+
+				return ctrl.Result{
+					Requeue: true,
+				}, nil
+			}
+
+			// current time is before next execution time
+			if currentTime.Before(*nextExecutionTime) {
+				logger.Info("")
+				return ctrl.Result{
+					RequeueAfter: nextExecutionTime.Sub(currentTime),
+				}, nil
+			}
+
 		}
-
-		// current time is before next execution time
-		if time.Now().Before(*nextExecutionTime) {
-			logger.Info("")
-			return ctrl.Result{
-				Requeue: true,
-			}, nil
-		}
-
 	}
 
 	//*********************** create the job
@@ -122,6 +125,8 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			Requeue: true,
 		}, nil
 	}
+
+	// set current clusterscan as owner of the above initialized job
 	if err := ctrl.SetControllerReference(&clusterscan, job, r.Scheme); err != nil {
 		logger.Error(err, "cannot set reference of clusterscan")
 		return ctrl.Result{
@@ -143,23 +148,9 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return ctrl.Result{}, nil
 }
 
-// func getScheduledTimeForJobHelper(job *kbatch.Job) (*time.Time, error) {
-// 	timeRaw := job.Annotations[scheduledAtAnnotation]
-// 	if len(timeRaw) == 0 {
-// 		return nil, nil
-// 	}
-
-// 	timeParsed, err := time.Parse(time.RFC3339, timeRaw)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return &timeParsed, nil
-// }
-
 func getNextExecutionTime(logger logr.Logger, calculateFromTime time.Time, cronExpression string) (*time.Time, error) {
 
-	//                   logger.Info("calculating next execution time")
+	logger.Info("[get Next Execution Time]", "current time", calculateFromTime)
 	cronParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	schedule, err := cronParser.Parse(cronExpression)
 	if err != nil {
@@ -169,14 +160,6 @@ func getNextExecutionTime(logger logr.Logger, calculateFromTime time.Time, cronE
 
 	nextTime := schedule.Next(calculateFromTime)
 	return &nextTime, nil
-
-}
-
-func getScheduledResult(currentTime time.Time) ctrl.Result {
-
-	return ctrl.Result{
-		Requeue: true,
-	}
 
 }
 

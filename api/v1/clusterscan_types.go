@@ -30,7 +30,8 @@ type ClusterScanSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// the cron formatted schedule for ClusterScan
-	Schedule string `json:"schedule"`
+	// +optional
+	Schedule *string `json:"schedule,omitempty"`
 
 	// template for the kuberentes job to run as part of clusterscan
 	JobTemplate batchv1.JobTemplateSpec `json:"jobTemplate"`

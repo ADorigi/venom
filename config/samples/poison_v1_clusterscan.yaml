@@ -1,7 +1,23 @@
 apiVersion: poison.venom.gule-gulzar.com/v1
 kind: ClusterScan
 metadata:
-  name: clusterscan-sample
+  name: clusterscan-one-off
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: busybox
+            name: testjob
+          restartPolicy: Never
+
+--- 
+
+apiVersion: poison.venom.gule-gulzar.com/v1
+kind: ClusterScan
+metadata:
+  name: clusterscan-cron
 spec:
   schedule: "*/1 * * * *"
   jobTemplate:
