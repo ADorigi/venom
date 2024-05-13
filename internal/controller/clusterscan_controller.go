@@ -49,6 +49,7 @@ const (
 //+kubebuilder:rbac:groups=poison.venom.gule-gulzar.com,resources=clusterscans,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=poison.venom.gule-gulzar.com,resources=clusterscans/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=poison.venom.gule-gulzar.com,resources=clusterscans/finalizers,verbs=update
+//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 
 func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
@@ -94,6 +95,7 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 						}
 
 						if *toDelete {
+							logger.Error(err, "deleting old job")
 							if err := r.Delete(ctx, &job, client.PropagationPolicy(metav1.DeletePropagationBackground)); client.IgnoreNotFound(err) != nil {
 								logger.Error(err, "unable to delete expired job", "job", job)
 							}
