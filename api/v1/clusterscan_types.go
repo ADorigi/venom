@@ -21,13 +21,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // ClusterScanSpec defines the desired state of ClusterScan
 type ClusterScanSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 
 	// the cron formatted schedule for ClusterScan
 	// +optional
@@ -35,14 +30,17 @@ type ClusterScanSpec struct {
 
 	// template for the kuberentes job to run as part of clusterscan
 	JobTemplate batchv1.JobTemplateSpec `json:"jobTemplate"`
+
+	// time(in minutes) for which jobs will be retained
+	// cannot be kept optional when specifying `Schedule`
+	// +optional
+	JobRetentionTime int32 `json:"jobRetentionTime"`
 }
 
 // ClusterScanStatus defines the observed state of ClusterScan
 type ClusterScanStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 
-	// this is updated to the creation time of the last created job
+	// this is updated, in the controller, to the creation time of the last created job
 	LastScheduledTime *metav1.Time `json:"lastScheduleTime,omitempty"`
 }
 

@@ -50,15 +50,6 @@ const (
 //+kubebuilder:rbac:groups=poison.venom.gule-gulzar.com,resources=clusterscans/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=poison.venom.gule-gulzar.com,resources=clusterscans/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the ClusterScan object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
 	logger := log.FromContext(ctx)
@@ -66,7 +57,6 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	currentTime := time.Now()
 	logger.Info("[running reconciler]", "time", currentTime.String())
 
-	// TODO(user): your logic here
 	clusterscan := poisonv1.ClusterScan{}
 	err := r.Get(ctx, req.NamespacedName, &clusterscan)
 	if err != nil {
@@ -74,25 +64,44 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	//*********************** get the list of all jobs run by our clusterscan resource
-
-	// var ourJobs kbatch.JobList
-	// if err := r.List(ctx, &ourJobs, client.InNamespace(req.Namespace)); err != nil {
-	// 	logger.Error(err, "unable to list child Jobs")
-	// 	return ctrl.Result{}, err
-	// }
-
-	//*********************** check if already scheduled
+	//*********************** check if job already scheduled
 	if clusterscan.Status.LastScheduledTime != nil {
 
 		//*********************** check if it is a one off or recurring clusterscan resource
 
-		if clusterscan.Spec.Schedule == nil {
+		if clusterscan.Spec.Schedule != nil {
 
-			logger.Info("job already created")
-			return ctrl.Result{}, nil
+			//*********************** get the list of all jobs run by our clusterscan resource
 
-		} else {
+			var allJobs kbatch.JobList
+			if err := r.List(ctx, &allJobs, client.InNamespace(req.Namespace)); err != nil {
+				logger.Error(err, "unable to list all Jobs")
+				return ctrl.Result{}, err
+			}
+
+			// var jobsToDelete []kbatch.Job
+
+			for _, job := range allJobs.Items {
+				// if job has our label
+				if label, ok := job.Labels[customJobLabel]; ok {
+					// if the label is for the current clusterscan resource
+					if label == fmt.Sprintf("%s-%s", clusterscan.Namespace, clusterscan.Name) {
+
+						toDelete, err := needsDeletion(&job, currentTime, clusterscan.Spec.JobRetentionTime)
+						if err != nil {
+							logger.Error(err, "unable to determine job's expiry")
+							return ctrl.Result{}, err
+						}
+
+						if *toDelete {
+							if err := r.Delete(ctx, &job, client.PropagationPolicy(metav1.DeletePropagationBackground)); client.IgnoreNotFound(err) != nil {
+								logger.Error(err, "unable to delete expired job", "job", job)
+							}
+						}
+
+					}
+				}
+			}
 
 			//*********************** calculate the nexttime from the last scheduled time using helper function
 
@@ -113,10 +122,17 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				}, nil
 			}
 
+		} else {
+
+			logger.Info("job already created")
+			return ctrl.Result{}, nil
+
 		}
 	}
 
 	//*********************** create the job
+
+	// initialize job using helper function
 	job, err := createJob(&clusterscan, currentTime)
 	if err != nil {
 		logger.Error(err, "unable to construct job from template")
@@ -134,11 +150,13 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}, nil
 	}
 
+	// finally, create the job
 	if err := r.Create(ctx, job); err != nil {
 		logger.Error(err, "unable to create Job for CronJob", "job", job)
 		return ctrl.Result{}, err
 	}
 
+	// update last scheduled time for the clusterscan
 	clusterscan.Status.LastScheduledTime = &metav1.Time{Time: currentTime}
 	if err := r.Status().Update(ctx, &clusterscan); err != nil {
 		logger.Error(err, "unable to update CronJob status")
@@ -186,6 +204,24 @@ func createJob(clusterscan *poisonv1.ClusterScan, currentTime time.Time) (*kbatc
 
 	return job, nil
 
+}
+
+func needsDeletion(job *kbatch.Job, currentTime time.Time, retentionTime int32) (*bool, error) {
+	timeRaw := job.Annotations[scheduledAtAnnotation]
+	if len(timeRaw) == 0 {
+		return nil, nil
+	}
+
+	timeParsed, err := time.Parse(time.RFC3339, timeRaw)
+	if err != nil {
+		return nil, err
+	}
+
+	addedTime := timeParsed.Add(time.Minute * time.Duration(retentionTime))
+
+	returnValue := addedTime.Before(currentTime)
+
+	return &returnValue, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -28,3 +28,4 @@ spec:
           - image: busybox
             name: testjob
           restartPolicy: Never
+  jobRetentionTime: 5

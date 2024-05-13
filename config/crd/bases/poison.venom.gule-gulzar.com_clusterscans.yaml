@@ -26,6 +26,9 @@ spec:
             type: object
           spec:
             properties:
+              jobRetentionTime:
+                format: int32
+                type: integer
               jobTemplate:
                 properties:
                   metadata:
