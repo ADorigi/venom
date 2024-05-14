@@ -64,16 +64,17 @@ spec:
 Since Venom is still under development, it can be deployed from source using the following steps:
 
 1. You need access to a kubernetes cluster. The following commands automatically use the current context in your `kubeconfig` file.
-2. Run `make install` command to install the CRDs into the cluster.
-3. Run `make run` command to start the controller locally.
-4. Use kustomize to deploy sample resources for ClusterScan resource, defined in config/samples/ of this repository. 
+2. Clone the repository and open a terminal at its root.
+3. Run `make install` command to install the CRDs into the cluster.
+4. Run `make run` command to start the controller locally.
+5. Use kustomize to deploy sample resources for ClusterScan resource, defined in config/samples/ of this repository. 
 ```
 kubectl apply -k config/samples
 ```
-
+<!-- 
 ### Using operator image from docker hub
 
-Instead of `make run`, the deployed image for the operator from docker hub can also be used
+Instead of `make run`, the deployed image for the operator from docker hub can also be used -->
 
 
 <!-- 
