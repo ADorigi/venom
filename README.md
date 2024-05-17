@@ -76,6 +76,11 @@ kubectl apply -k config/samples
 Instead of `make run`, the deployed image for the operator from docker hub can also be used
 
 
+### Video for explanation
+
+[Youtube](https://youtu.be/WPs8SrjzMJM)
+
+
 <!-- 
 ## Steps I followed
 
